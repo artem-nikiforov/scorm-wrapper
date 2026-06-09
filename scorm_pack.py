@@ -9,7 +9,7 @@ Button in your HTML:
     <button onclick="SCORM.complete()">Завершить</button>
 """
 
-import os
+import hashlib
 import re
 import zipfile
 from pathlib import Path
@@ -124,11 +124,20 @@ SKIP_EXTS  = {".pyc", ".pyo", ".zip", ".py"}
 
 
 def slugify(name: str) -> str:
-    """Convert folder name to a stable SCORM identifier (no spaces, ASCII-safe)."""
+    """Convert folder name to a stable SCORM identifier.
+
+    Always unique: appends 8-char MD5 hash of the original name so folders
+    with Cyrillic/special chars never collapse to the same generic ID.
+    Example: "Мой курс"  → "moi_kurs_a3f8c1d2"  (if translit present)
+             "Мой курс"  → "course_a3f8c1d2"      (if only non-ASCII)
+             "my-course" → "my_course_d41d8cd9"
+    """
+    h = hashlib.md5(name.encode("utf-8")).hexdigest()[:8]
     s = name.strip().lower()
     s = re.sub(r"[^\w]+", "_", s, flags=re.ASCII)
-    s = s.strip("_") or "course"
-    return s
+    s = s.strip("_")
+    prefix = s if s else "course"
+    return f"{prefix}_{h}"
 
 
 def xml_escape(text: str) -> str:
