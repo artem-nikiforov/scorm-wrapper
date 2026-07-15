@@ -122,18 +122,35 @@ SKIP_FILES = {"scorm_pack.py", ".DS_Store", "Thumbs.db"}
 SKIP_DIRS  = {".git", ".svn", "__pycache__", "node_modules", ".vscode"}
 SKIP_EXTS  = {".pyc", ".pyo", ".zip", ".py"}
 
+# Cyrillic → Latin transliteration table
+_CYR = {
+    'а':'a',  'б':'b',  'в':'v',  'г':'g',  'д':'d',
+    'е':'e',  'ё':'yo', 'ж':'zh', 'з':'z',  'и':'i',
+    'й':'y',  'к':'k',  'л':'l',  'м':'m',  'н':'n',
+    'о':'o',  'п':'p',  'р':'r',  'с':'s',  'т':'t',
+    'у':'u',  'ф':'f',  'х':'kh', 'ц':'ts', 'ч':'ch',
+    'ш':'sh', 'щ':'sch','ъ':'',   'ы':'y',  'ь':'',
+    'э':'e',  'ю':'yu', 'я':'ya',
+}
+
+
+def _translit(text: str) -> str:
+    """Replace Cyrillic characters with their Latin equivalents."""
+    return "".join(_CYR.get(c, c) for c in text)
+
 
 def slugify(name: str) -> str:
-    """Convert folder name to a stable SCORM identifier.
+    """Convert folder name to a stable Latin SCORM identifier.
 
-    Always unique: appends 8-char MD5 hash of the original name so folders
-    with Cyrillic/special chars never collapse to the same generic ID.
-    Example: "Мой курс"  → "moi_kurs_a3f8c1d2"  (if translit present)
-             "Мой курс"  → "course_a3f8c1d2"      (if only non-ASCII)
-             "my-course" → "my_course_d41d8cd9"
+    Cyrillic is transliterated, other non-ASCII is dropped.
+    8-char MD5 hash appended for guaranteed uniqueness.
+    Examples:
+      "Мой курс"       → "moy_kurs_c5467579"
+      "Основы Python"  → "osnovy_python_f0124aee"
+      "my-course"      → "my_course_4cdf4ce0"
     """
     h = hashlib.md5(name.encode("utf-8")).hexdigest()[:8]
-    s = name.strip().lower()
+    s = _translit(name.strip().lower())
     s = re.sub(r"[^\w]+", "_", s, flags=re.ASCII)
     s = s.strip("_")
     prefix = s if s else "course"
